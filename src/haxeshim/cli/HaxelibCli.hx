@@ -36,6 +36,22 @@ class HaxelibCli {
   }
 
   public function path(libs:Array<String>) {
+    // #region agent log
+    try {
+      final payload = haxe.Json.stringify({
+        sessionId: 'ce4f31',
+        hypothesisId: 'H2',
+        location: 'HaxelibCli.hx:path',
+        message: 'shim path() invoked',
+        data: { libs: libs, cwd: Sys.getCwd(), haxelib: installation.haxelib },
+        timestamp: Date.now().getTime(),
+      });
+      #if nodejs
+      js.node.Fs.appendFileSync('/Users/kevin/Codes/haxeshim/.cursor/debug-ce4f31.log', payload + '\n');
+      js.Node.console.error('[haxeshim] path ' + libs.join(' ') + ' cwd=' + Sys.getCwd());
+      #end
+    } catch (_:Dynamic) {}
+    // #endregion
     var args = [],
         out = [];
 
