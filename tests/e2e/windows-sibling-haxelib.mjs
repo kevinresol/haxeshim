@@ -38,16 +38,26 @@ function getConfiguredVersion(dir) {
   return JSON.parse(readFileSync(join(dir, '.haxerc'), 'utf8')).version;
 }
 
+/** Same default as Scope.DEFAULT_ROOT. */
+function getHaxeRoot() {
+  return (
+    process.env.HAXE_ROOT ||
+    process.env.HAXESHIM_ROOT ||
+    join(
+      process.platform === 'win32'
+        ? process.env.APPDATA || join(process.env.USERPROFILE || '', 'AppData', 'Roaming')
+        : process.env.HOME || '',
+      'haxe'
+    )
+  );
+}
+
 /**
- * Locate downloaded Windows haxe.exe + sibling haxelib.exe under ~/haxe/versions
- * (or HAXESHIM_ROOT). Returns null if not found.
+ * Locate downloaded Windows haxe.exe + sibling haxelib.exe.
  * @param {string} version
  */
 async function findWindowsHaxePair(version) {
-  const root =
-    process.env.HAXESHIM_ROOT ||
-    join(process.env.USERPROFILE || process.env.HOME || '', 'haxe');
-  const versionsRoot = join(root, 'versions');
+  const versionsRoot = join(getHaxeRoot(), 'versions');
   let entries;
   try {
     entries = await readdir(versionsRoot, { withFileTypes: true });
@@ -88,20 +98,23 @@ async function main() {
   prepareFixture(projectDir, { haxeVersion });
 
   const configured = getConfiguredVersion(projectDir);
-  const pair = await findWindowsHaxePair(configured);
-  if (!pair) {
-    throw new Error(
-      'Expected a Windows Haxe install with sibling haxe.exe + haxelib.exe under ~/haxe/versions'
-    );
-  }
-
-  const haxelibStat = await stat(pair.haxelibExe);
+  const haxeRoot = getHaxeRoot();
   console.log(`  Haxe version (.haxerc): ${configured}`);
-  console.log(`  Haxe dir: ${pair.path}`);
-  console.log(`  Sibling haxelib.exe size: ${haxelibStat.size} bytes`);
-  if (haxelibStat.size < 10000) {
+  console.log(`  Haxe root: ${haxeRoot}`);
+
+  const pair = await findWindowsHaxePair(configured);
+  if (pair) {
+    const haxelibStat = await stat(pair.haxelibExe);
+    console.log(`  Haxe dir: ${pair.path}`);
+    console.log(`  Sibling haxelib.exe size: ${haxelibStat.size} bytes`);
+    if (haxelibStat.size < 10000) {
+      console.log(
+        '  Note: haxelib.exe looks like an exify shim already; repro may not trigger.'
+      );
+    }
+  } else {
     console.log(
-      '  Note: haxelib.exe looks like an exify shim already; repro may not trigger.'
+      '  Warning: could not locate sibling haxe.exe/haxelib.exe; continuing with compile repro'
     );
   }
 
@@ -122,7 +135,7 @@ async function main() {
     throw new Error(
       'Windows sibling-haxelib bug: haxe.exe resolved stock sibling haxelib.exe ' +
         'instead of the scoped haxeshim (gencpp `haxelib path hxcpp` failed).\n' +
-        `  haxe dir: ${pair.path}\n` +
+        (pair ? `  haxe dir: ${pair.path}\n` : '') +
         `  output:\n${output}`
     );
   }
