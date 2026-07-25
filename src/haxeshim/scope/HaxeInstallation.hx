@@ -2,7 +2,6 @@ package haxeshim.scope;
 
 import haxeshim.sys.*;
 import haxeshim.sys.Os.EXECUTABLE_EXTENSION as EXT;
-import haxeshim.exify.WindowsExe;
 
 using sys.io.File;
 using sys.FileSystem;
@@ -21,7 +20,7 @@ class HaxeInstallation {
     this.path = path;
     this.version = version;
     this.compiler = '$path/haxe$EXT';
-    this.haxelib = WindowsExe.ensureVersionHaxelib(path);
+    this.haxelib = '$path/haxelib$EXT';
     this.stdLib = '$path/std';
     this.haxelibRepo = haxelibRepo;
     this.neko = neko;
